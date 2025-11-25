@@ -12,7 +12,7 @@ def build_gdp_panel(
     Build clean GDP per capita panel:
     columns: country, year, gdp_pcap
     """
-    raw_path = BASE_DIR / "data" / "raw" / "gdp" / raw_filename
+    raw_path = BASE_DIR / "data" / "raw" / raw_filename
     print(f"Reading raw GDP file from: {raw_path}")
 
     df_raw = pd.read_excel(
