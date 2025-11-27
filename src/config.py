@@ -11,7 +11,6 @@ TARGET_COUNTRIES = [
     "DJI",
     "SOM",
     "SDN",
-    "SSD",
     "KEN",
     "UGA",
     "TZA",
@@ -23,7 +22,7 @@ TARGET_COUNTRIES = [
 ]
 
 # Countries that DO have GDP data (used for training)
-TRAINING_COUNTRIES = [c for c in TARGET_COUNTRIES if c != "ERI"]
+TRAINING_COUNTRIES = [c for c in TARGET_COUNTRIES]
 
 # Column name in your shapefile that contains these codes
 ISO_COL = "ISO3"  # change if your shapefile uses a different name
@@ -33,15 +32,14 @@ YEARS = list(range(2012, 2023))  # 2012–2022 inclusive
 
 
 def viirs_raster_path(year: int) -> Path:
-    """Path to the VIIRS raster for a given year."""
+    # Files are directly inside data/raw, e.g. data/raw/viirs_2012.tif
     return (
         BASE_DIR
         / "data"
         / "raw"
-        / "viirs"
-        / str(year)
-        / f"viirs_{year}.tif"  # change if your filenames are different
+        / f"viirs_{year}.tif"
     )
+
 
 
 def countries_shapefile_path() -> Path:
