@@ -42,7 +42,7 @@ def build_gdp_panel(
 
     panel = df_long[["country", "year", "gdp_pcap (US dollars)"]].sort_values(["country", "year"])
 
-    out_path = BASE_DIR / "data" / "processed" / "gdp_africa_panel.csv"
+    out_path = BASE_DIR / "data" / "processed" / "gdp_panel.csv"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     panel.to_csv(out_path, index=False)
 

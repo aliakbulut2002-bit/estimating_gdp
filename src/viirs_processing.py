@@ -7,7 +7,7 @@ import geopandas as gpd
 import rasterio
 from rasterio.mask import mask
 
-from src.config import BASE_DIR, TRAINING_COUNTRIES
+from src.config import BASE_DIR, TARGET_COUNTRIES
 
 # Natural Earth Admin 0 – Countries shapefile
 SHAPE_PATH = BASE_DIR / "data" / "raw" / "ne_10m_admin_0_countries.shp"
@@ -16,16 +16,16 @@ CODE_COL = "SOV_A3"  # 3-letter country code column in this shapefile
 
 def compute_viirs_means_for_year(year: int) -> pd.DataFrame:
     """
-    Compute mean VIIRS light for each training country for a given year.
+    Compute mean VIIRS light for each target country for a given year.
 
     Returns a DataFrame with columns: country, year, mean_light
     """
     viirs_path = BASE_DIR / "data" / "raw" / f"viirs_{year}.tif"
     print(f"Reading VIIRS raster from: {viirs_path}")
 
-    # Read countries and keep only those in TRAINING_COUNTRIES
+    # Read countries and keep only those in TARGET_COUNTRIES
     gdf = gpd.read_file(SHAPE_PATH)
-    gdf = gdf[gdf[CODE_COL].isin(TRAINING_COUNTRIES)].copy()
+    gdf = gdf[gdf[CODE_COL].isin(TARGET_COUNTRIES)].copy()
 
     results: list[dict] = []
 
@@ -79,7 +79,7 @@ def build_viirs_panel(first_year: int = 2012, last_year: int = 2024) -> Path:
 
     panel = pd.concat(dfs, ignore_index=True)
 
-    out_path = BASE_DIR / "data" / "processed" / "viirs_africa_panel.csv"
+    out_path = BASE_DIR / "data" / "processed" / "viirs_panel.csv"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     panel.to_csv(out_path, index=False)
 
