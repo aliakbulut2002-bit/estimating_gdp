@@ -11,7 +11,15 @@ def build_model_panel() -> Path:
     Merge all processed panels (GDP, VIIRS, population, land area, urban pop)
     into a single panel on (country, year).
 
-    Output: data/processed/model_panel.csv
+    Logic:
+        - Start from VIIRS (where Eritrea is present).
+        - LEFT join GDP: Eritrea is kept even if missing in gdp_panel,
+          so its GDP will be NaN (to be predicted later).
+        - INNER join population, land area, and urban pop: we require
+          Eritrea to exist in these panels as well.
+
+    Output:
+        data/processed/model_panel.csv
     """
     processed_dir = BASE_DIR / "data" / "processed"
 
@@ -29,10 +37,10 @@ def build_model_panel() -> Path:
 
     # ---- merge step by step on (country, year) ----
     panel = (
-        gdp
-        .merge(viirs, on=["country", "year"], how="inner")
-        .merge(pop, on=["country", "year"], how="inner")
-        .merge(land, on=["country", "year"], how="inner")
+        viirs
+        .merge(gdp,   on=["country", "year"], how="left")
+        .merge(pop,   on=["country", "year"], how="inner")
+        .merge(land,  on=["country", "year"], how="inner")
         .merge(urban, on=["country", "year"], how="inner")
     )
 
