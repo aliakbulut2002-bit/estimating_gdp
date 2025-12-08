@@ -1,6 +1,5 @@
 from pathlib import Path
 import pandas as pd
-
 from src.config import TRAINING_COUNTRIES, BASE_DIR
 
 

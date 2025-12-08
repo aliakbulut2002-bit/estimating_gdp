@@ -89,4 +89,4 @@ def build_viirs_panel(first_year: int = 2012, last_year: int = 2024) -> Path:
 
 if __name__ == "__main__":
     # for now only 2012 since that's the file you have
-    build_viirs_panel(first_year=2012, last_year=2012)
+    build_viirs_panel(first_year=2012, last_year=2021)

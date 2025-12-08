@@ -7,21 +7,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # All countries for which you want night-lights data (including Eritrea, our prediction target)
 TARGET_COUNTRIES = [
     "ERI",  # Eritrea (prediction target)
-     # --- Middle East ---
-    "SAU",  # Saudi Arabia
-    "ARE",  # United Arab Emirates
-    "QAT",  # Qatar
-    "KWT",  # Kuwait
-    "OMN",  # Oman
-    "BHR",  # Bahrain
-    "TUR",  # Turkey
-    "ISR",  # Israel
-    "IRN",  # Iran
-    "LBN",  # Lebanon
-    "JOR",  # Jordan
-    "YEM",  # Yemen
-    "SYR",  # Syria
-    "IRQ",  # Iraq
     # --- Africa (you already have these) ---
     "DZA", "AGO", "BEN", "BWA", "BFA", "BDI", "CMR", "CAF", "TCD",
     "COM", "COD", "COG", "CIV", "DJI", "EGY", "GNQ", "SWZ", "ETH",
@@ -58,6 +43,20 @@ TARGET_COUNTRIES = [
     "SWE",  # Sweden
     "CHE",  # Switzerland
     "GBR",  # United Kingdom
+     # --- Middle East ---
+    "BHR",  # Bahrain
+    "IRN",  # Iran
+    "IRQ",  # Iraq
+    "JOR",  # Jordan
+    "KWT",  # Kuwait
+    "LBN",  # Lebanon
+    "OMN",  # Oman
+    "QAT",  # Qatar
+    "SAU",  # Saudi Arabia
+    "SYR",  # Syria
+    "TUR",  # Turkey
+    "ARE",  # United Arab Emirates
+    "YEM",  # Yemen
 ]
 
 
