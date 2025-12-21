@@ -7,7 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # All countries for which you want night-lights data (including Eritrea, our prediction target)
 TARGET_COUNTRIES = [
     "ERI",  # Eritrea (prediction target)
-    # --- Africa (you already have these) ---
+
+    # --- Africa ---
     "DZA", "AGO", "BEN", "BWA", "BFA", "BDI", "CMR", "CAF", "TCD",
     "COM", "COD", "COG", "CIV", "DJI", "EGY", "GNQ", "SWZ", "ETH",
     "GAB", "GMB", "GHA", "GIN", "GNB", "KEN", "LSO", "LBR", "LBY",
@@ -15,49 +16,26 @@ TARGET_COUNTRIES = [
     "NGA", "RWA", "SEN", "SLE", "SOM", "ZAF", "SSD", "SDN", "TZA",
     "TGO", "TUN", "UGA", "ZMB", "ZWE",
 
-    # --- Europe (example set) ---
-    "ALB",  # Albania
-    "ARM",  # Armenia
-    "AUT",  # Austria
-    "BEL",  # Belgium
-    "BGR",  # Bulgaria
-    "HRV",  # Croatia
-    "CZE",  # Czech Rep.
-    "DNK",  # Denmark
-    "EST",  # Estonia
-    "FIN",  # Finland
-    "FRA",  # France
-    "DEU",  # Germany
-    "GRC",  # Greece
-    "HUN",  # Hungary
-    "IRL",  # Ireland
-    "ITA",  # Italy
-    "LVA",  # Latvia
-    "LTU",  # Lithuania
-    "NLD",  # Netherlands
-    "NOR",  # Norway
-    "POL",  # Poland
-    "PRT",  # Portugal
-    "ROU",  # Romania
-    "ESP",  # Spain
-    "SWE",  # Sweden
-    "CHE",  # Switzerland
-    "GBR",  # United Kingdom
-     # --- Middle East ---
-    "BHR",  # Bahrain
-    "IRN",  # Iran
-    "IRQ",  # Iraq
-    "JOR",  # Jordan
-    "KWT",  # Kuwait
-    "LBN",  # Lebanon
-    "OMN",  # Oman
-    "QAT",  # Qatar
-    "SAU",  # Saudi Arabia
-    "SYR",  # Syria
-    "TUR",  # Turkey
-    "ARE",  # United Arab Emirates
-    "YEM",  # Yemen
+    # --- Europe ---
+    "ALB", "ARM", "AUT", "BEL", "BGR", "HRV", "CZE", "DNK", "EST",
+    "FIN", "FRA", "DEU", "GRC", "HUN", "IRL", "ITA", "LVA", "LTU",
+    "NLD", "NOR", "POL", "PRT", "ROU", "ESP", "SWE", "CHE", "GBR",
+
+    # --- Middle East ---
+    "BHR", "IRN", "IRQ", "JOR", "KWT", "LBN", "OMN", "QAT", "SAU",
+    "SYR", "TUR", "ARE", "YEM",
+
+    # --- Asia (added) ---
+    # East Asia
+    "CHN", "JPN", "KOR", "MNG",
+    # South Asia
+    "IND", "PAK", "BGD", "LKA", "NPL", "AFG",
+    # Southeast Asia
+    "IDN", "VNM", "THA", "MYS", "PHL", "SGP", "KHM", "LAO", "MMR",
+    # Central Asia
+    "KAZ", "KGZ", "TJK", "TKM", "UZB",
 ]
+
 
 
 # Countries that DO have GDP data (used for training)

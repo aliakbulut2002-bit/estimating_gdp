@@ -1,12 +1,10 @@
 # src/evaluation.py
 """Model evaluation and visualization for GDP per capita regression."""
 
-from pyexpat import model
-from unicodedata import name
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
-
+from sklearn.model_selection import KFold, cross_val_score
 from src.data_loader import load_and_split
 from src.models import train_random_forest, train_knn, train_linear
 
@@ -34,16 +32,30 @@ def evaluate_model(model, X_test, y_test, model_name: str):
 
 
 def check_overfitting(model, X_train, y_train, X_test, y_test, name: str):
-    "Print train vs test R² to diagnose overfitting."
-    train_r2 = model.score(X_train, y_train)   # R² sur train
-    test_r2 = model.score(X_test, y_test)      # R² sur test
-    gap = train_r2 - test_r2
+    """
+    Train vs Test comparison to diagnose overfitting.
 
-    print(f"\n{name} – overfitting check:")
-    print(f"  Train R²: {train_r2:.3f}")
-    print(f"  Test  R²: {test_r2:.3f}")
-    print(f"  Gap (train - test): {gap:.3f}")
-    return train_r2, test_r2, gap
+    Overfitting signal:
+      - Train RMSE much lower than Test RMSE
+      - Train R² much higher than Test R²
+    """
+    yhat_train = model.predict(X_train)
+    yhat_test = model.predict(X_test)
+
+    rmse_train = np.sqrt(mean_squared_error(y_train, yhat_train))
+    rmse_test = np.sqrt(mean_squared_error(y_test, yhat_test))
+
+    r2_train = r2_score(y_train, yhat_train)
+    r2_test = r2_score(y_test, yhat_test)
+
+    print(f"\n{name} — overfitting check:")
+    print(f"  Train RMSE: {rmse_train:.3f} | Train R²: {r2_train:.3f}")
+    print(f"  Test  RMSE: {rmse_test:.3f} | Test  R²: {r2_test:.3f}")
+    print(f"  RMSE gap (test - train): {rmse_test - rmse_train:.3f}")
+    print(f"  R² gap   (train - test): {r2_train - r2_test:.3f}")
+
+    return rmse_train, rmse_test, r2_train, r2_test
+
 
 if __name__ == "__main__":
     # 1. Load data and split (Eritrea is held out inside load_and_split)
@@ -60,14 +72,19 @@ if __name__ == "__main__":
     rf = train_random_forest(X_train, y_train, random_state=RANDOM_STATE)
     knn = train_knn(X_train, y_train, n_neighbors=15)
     lin = train_linear(X_train, y_train)
-
+           
     # 3. Evaluate on the test set
     print("Test performance (target = log GDP per capita):")
     rmse_rf, r2_rf = evaluate_model(rf, X_test, y_test, "Random Forest")
     rmse_knn, r2_knn = evaluate_model(knn, X_test, y_test, "kNN")
     rmse_lin, r2_lin = evaluate_model(lin, X_test, y_test, "Linear regression")
 
-    # 4. Simple visualization: true vs predicted for Random Forest
+    # 4. Overfitting checks (train vs test)
+    check_overfitting(rf, X_train, y_train, X_test, y_test, "Random Forest")
+    check_overfitting(knn, X_train, y_train, X_test, y_test, "kNN")
+    check_overfitting(lin, X_train, y_train, X_test, y_test, "Linear regression")
+
+    # 5. Simple visualization: true vs predicted for Random Forest
     y_pred_rf = rf.predict(X_test)
 
     plt.figure(figsize=(6, 6))
@@ -75,11 +92,11 @@ if __name__ == "__main__":
     plt.xlabel("True log GDP per capita")
     plt.ylabel("Predicted log GDP per capita (RF)")
     plt.title("Random Forest: True vs Predicted (test set)")
-    # 45-degree line
+
     min_val = min(y_test.min(), y_pred_rf.min())
     max_val = max(y_test.max(), y_pred_rf.max())
     plt.plot([min_val, max_val], [min_val, max_val], linestyle="--")
+
     plt.tight_layout()
     plt.show()
-
-   
+    
