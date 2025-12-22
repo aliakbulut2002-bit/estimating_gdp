@@ -29,7 +29,6 @@ from src.config import BASE_DIR
 from src.data_loader import load_and_split
 from src.models import train_random_forest, train_knn, train_linear, train_gbdt
 
-# Evaluation utilities (computed in main; functions are imported and called here)
 from src.evaluation import (
     evaluate_one_model,
     build_results_table,
@@ -40,11 +39,7 @@ RANDOM_STATE = 42
 
 
 def run_module(module_name: str) -> None:
-    """
-    Execute a project module via `python -m <module>` using the current interpreter.
-
-    This ensures all preprocessing steps run under the same environment as `main.py`.
-    """
+    """Execute a project module via `python -m <module>` using the current interpreter."""
     print(f"  Running {module_name} ...")
     subprocess.run([sys.executable, "-m", module_name], check=True)
 
@@ -52,11 +47,6 @@ def run_module(module_name: str) -> None:
 def run_data_pipeline() -> None:
     """
     Execute preprocessing modules in a standard dependency order and construct the modeling panel.
-
-    The expected sequence is:
-      (i) compute covariate panels from raw inputs,
-      (ii) compute the GDP-per-capita target panel,
-      (iii) merge all components into a single modeling dataset.
     """
     print("\n0) Building dataset from raw files...")
 
@@ -72,34 +62,29 @@ def run_data_pipeline() -> None:
     print("   ✓ Data pipeline finished")
 
 
-def save_table_png(
-    df: pd.DataFrame,
-    out_path: Path,
-    title: str | None = None,
-    float_decimals: int = 3,
-) -> None:
+def save_table_png(df: pd.DataFrame, out_path: Path, title: str | None = None) -> None:
     """
     Save a pandas DataFrame as a readable PNG table.
-
-    Improvements vs. the basic Matplotlib table:
-      - Formats numeric columns (rounded) to avoid long float strings.
-      - Auto-sizes columns based on content length.
-      - Bold headers and improved spacing for readability.
     """
-    # ---- format dataframe for display (avoid long floats) ----
     df_disp = df.copy()
 
+    # Convert all cells to strings (avoid float artifacts like 2012.000)
     for col in df_disp.columns:
         if pd.api.types.is_numeric_dtype(df_disp[col]):
-            df_disp[col] = df_disp[col].map(lambda x: f"{x:.{float_decimals}f}" if pd.notna(x) else "")
+            df_disp[col] = df_disp[col].map(
+                lambda x: ""
+                if pd.isna(x)
+                else str(int(x))
+                if float(x).is_integer()
+                else str(x)
+            )
         else:
             df_disp[col] = df_disp[col].astype(str)
 
-    # Convert to strings for table rendering
     cell_text = df_disp.values.tolist()
     col_labels = df_disp.columns.tolist()
 
-    # ---- compute column widths based on max string length ----
+    # Auto-size columns based on content length
     col_max_lens = []
     for j, col in enumerate(col_labels):
         max_len = len(str(col))
@@ -108,12 +93,11 @@ def save_table_png(
         col_max_lens.append(max_len)
 
     total = sum(col_max_lens) if sum(col_max_lens) > 0 else 1
-    col_widths = [max_len / total for max_len in col_max_lens]
+    col_widths = [m / total for m in col_max_lens]
 
-    # ---- figure sizing heuristics ----
     nrows, ncols = df_disp.shape
-    fig_w = min(18.0, max(10.0, 12.0 * sum(col_widths)))   # wider for many/long columns
-    fig_h = min(10.0, max(2.5, 0.60 * nrows + 1.8))        # height scales with rows
+    fig_w = min(18.0, max(10.0, 14.0 * sum(col_widths)))
+    fig_h = min(10.0, max(2.5, 0.60 * nrows + 1.8))
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     ax.axis("off")
@@ -127,20 +111,17 @@ def save_table_png(
         colWidths=col_widths,
     )
 
-    # ---- styling ----
     table.auto_set_font_size(False)
     table.set_fontsize(11)
     table.scale(1.0, 1.45)
 
-    # Header styling (row 0 in matplotlib table is header)
+    # Bold headers
     for j in range(ncols):
-        cell = table[(0, j)]
-        cell.set_text_props(weight="bold")
+        table[(0, j)].set_text_props(weight="bold")
 
-    # Left-align first column (usually model names) for readability
+    # Left-align first column (model names / country codes)
     for i in range(1, nrows + 1):
-        cell = table[(i, 0)]
-        cell.set_text_props(ha="left")
+        table[(i, 0)].set_text_props(ha="left")
 
     if title is not None:
         ax.set_title(title, pad=14)
@@ -193,20 +174,16 @@ def save_metric_bars_png(
     out_path: Path,
     title: str,
     ylabel: str,
-    bar_width: float = 0.55,
+    bar_width: float = 0.45,
     zoom: bool = True,
 ) -> None:
     """
     Save a bar chart comparing models on a given metric.
 
-    Notes
-    -----
-    - `bar_width` controls bar thickness (smaller -> thinner bars).
-    - If `zoom=True`, the y-axis is tightened around the observed range to improve readability.
+    - Thin bars via `bar_width`
+    - Optional y-axis zoom to reduce “visual exaggeration”
     """
     df = results_df.copy()
-
-    # For RMSE, lower is better (ascending). For R², higher is better (descending).
     if metric_col.endswith("rmse"):
         df = df.sort_values(metric_col, ascending=True)
     else:
@@ -224,7 +201,6 @@ def save_metric_bars_png(
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=20, ha="right")
 
-    # Optional axis zoom to reduce visual exaggeration due to a zero baseline
     vmin, vmax = float(np.min(vals)), float(np.max(vals))
     if zoom and vmax > vmin:
         if metric_col.endswith("r2"):
@@ -236,7 +212,6 @@ def save_metric_bars_png(
             hi = vmax + pad
         ax.set_ylim(lo, hi)
 
-    # Add numeric labels above bars
     for b, val in zip(bars, vals):
         ax.text(
             b.get_x() + b.get_width() / 2,
@@ -252,19 +227,105 @@ def save_metric_bars_png(
     plt.close(fig)
 
 
+def save_nightlights_vs_log_gdp_zoom_png(
+    results_dir: Path,
+    panel_path: Path | None = None,
+    x_col: str = "mean_light",
+    gdp_col_candidates: tuple[str, ...] = ("gdp_pcap", "gdp_pcap (US dollars)"),
+) -> None:
+    """
+    Save a diagnostic scatter plot of night-time lights vs log GDP per capita (zoomed to mean_light in [0, 1]),
+    including a fitted linear trend line in the transformed x-scale.
+
+    This reads the merged model panel produced by `src.merge_data`.
+    """
+    if panel_path is None:
+        panel_path = BASE_DIR / "data" / "processed" / "model_panel.csv"
+
+    try:
+        df = pd.read_csv(panel_path)
+    except FileNotFoundError:
+        print(f"   ! Warning: model_panel.csv not found at {panel_path}; skipping night-lights plot.")
+        return
+
+    # Resolve GDP column name
+    gdp_col = None
+    for c in gdp_col_candidates:
+        if c in df.columns:
+            gdp_col = c
+            break
+
+    if x_col not in df.columns or gdp_col is None:
+        print(
+            "   ! Warning: required columns for night-lights plot not found. "
+            f"Need '{x_col}' and one of {gdp_col_candidates}. Skipping."
+        )
+        return
+
+    df_plot = df[[x_col, gdp_col]].copy()
+    df_plot = df_plot.dropna(subset=[x_col, gdp_col])
+
+    # Ensure numeric types
+    df_plot[x_col] = pd.to_numeric(df_plot[x_col], errors="coerce")
+    df_plot[gdp_col] = pd.to_numeric(df_plot[gdp_col], errors="coerce")
+    df_plot = df_plot.dropna(subset=[x_col, gdp_col])
+
+    if len(df_plot) == 0:
+        print("   ! Warning: no valid rows for night-lights plot after dropping NAs; skipping.")
+        return
+
+    x_raw = df_plot[x_col].values
+    y = np.log(df_plot[gdp_col].values)
+
+    # Zoom: keep only mean_light in [0, 1]
+    msk = (x_raw >= 0) & (x_raw <= 1)
+    x_raw = x_raw[msk]
+    y = y[msk]
+
+    if x_raw.size < 2:
+        print("   ! Warning: insufficient data in mean_light range [0, 1] for night-lights plot; skipping.")
+        return
+
+    # Transform x for fitting and plotting
+    x = np.log1p(x_raw)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(x, y, alpha=0.35, s=18)
+
+    # Linear trend in transformed space
+    m, b = np.polyfit(x, y, 1)
+    x_line = np.linspace(float(x.min()), float(x.max()), 200)
+    y_line = m * x_line + b
+    ax.plot(x_line, y_line, color="red", linewidth=2)
+
+    ax.set_xlabel("log(1 + mean_light)  (zoom: mean_light 0–1)")
+    ax.set_ylabel("log(GDP per capita)")
+    ax.set_title("Night lights vs log GDP per capita (with linear trend)")
+
+    fig.tight_layout()
+    out_path = results_dir / "nightlights_vs_log_gdp_zoom_0_1.png"
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"   ✓ Saved: {out_path.name}")
+
+
 def main() -> None:
     print("=" * 70)
     print("GDP per capita regression: End-to-end pipeline")
     print("=" * 70)
 
-    # Directory for final artifacts
     results_dir = BASE_DIR / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # 0) Build processed data and merged modeling panel from raw inputs
     run_data_pipeline()
 
-    # 1) Load the modeling panel and create train/test splits (Eritrea is held out)
+    # NEW: save the night-lights vs log GDP scatter (zoomed) from model_panel.csv
+    print("\n0b) Saving exploratory plot (night lights vs log GDP)...")
+    save_nightlights_vs_log_gdp_zoom_png(results_dir=results_dir)
+
+    # 1) Load split (Eritrea is held out)
     print("\n1) Loading modeling panel and splitting data...")
     (
         X_train,
@@ -280,7 +341,7 @@ def main() -> None:
     if X_eritrea is not None:
         print(f"   Eritrea rows kept for estimation: {X_eritrea.shape[0]}")
 
-    # 2) Train candidate models
+    # 2) Train models
     print("\n2) Training candidate models...")
     lr_model = train_linear(X_train, y_train)
     knn_model = train_knn(X_train, y_train, n_neighbors=15)
@@ -288,7 +349,7 @@ def main() -> None:
     rf_model = train_random_forest(X_train, y_train, random_state=RANDOM_STATE)
     print("   ✓ All models trained")
 
-    # 3) Comparative evaluation (RMSE/R² on train and test + generalization gaps)
+    # 3) Evaluate
     print("\n3) Evaluating models (target = log GDP per capita)...")
     models = [
         ("Linear regression", lr_model),
@@ -297,26 +358,23 @@ def main() -> None:
         ("Random Forest", rf_model),
     ]
 
-    results = []
-    for name, model in models:
-        results.append(evaluate_one_model(model, X_train, y_train, X_test, y_test, name))
-
+    results = [evaluate_one_model(m, X_train, y_train, X_test, y_test, name) for name, m in models]
     results_df = build_results_table(results, sort_by="test_rmse")
     print_results_table(results_df)
 
-    # Save model-comparison table as PNG (no CSV)
+    # Model comparison table (PNG only)
     model_table_png = results_dir / "model_comparison.png"
     save_table_png(
-        results_df,
+        results_df.round(3),
         model_table_png,
         title="Model comparison (target: log GDP per capita)",
     )
     print(f"\nSaved model comparison table to: {model_table_png}")
 
-    # 4) Save diagnostic plots (4 True vs Estimated plots + 2 metric comparison charts)
+    # 4) Save figures
     print("\n4) Saving figures to results/ ...")
 
-    # 4a) True vs Estimated for each model (test set)
+    # 4a) True vs Estimated (4 plots)
     for name, model in models:
         y_pred = model.predict(X_test)
         out_path = results_dir / f"true_vs_est_{_slug(name)}.png"
@@ -329,7 +387,7 @@ def main() -> None:
         )
         print(f"   ✓ Saved: {out_path.name}")
 
-    # 4b) Metric comparison charts (thin bars + y-axis zoom for readability)
+    # 4b) Metric charts (2 plots)
     r2_png = results_dir / "comparison_test_r2.png"
     save_metric_bars_png(
         results_df=results_df,
@@ -337,7 +395,7 @@ def main() -> None:
         out_path=r2_png,
         title="Model comparison: Test R²",
         ylabel="R² (test)",
-        bar_width=0.45,   # thinner bars
+        bar_width=0.45,
         zoom=True,
     )
     print(f"   ✓ Saved: {r2_png.name}")
@@ -349,12 +407,12 @@ def main() -> None:
         out_path=rmse_png,
         title="Model comparison: Test RMSE",
         ylabel="RMSE (test, log GDP per capita)",
-        bar_width=0.45,   # thinner bars
+        bar_width=0.45,
         zoom=True,
     )
     print(f"   ✓ Saved: {rmse_png.name}")
 
-    # 5) Select the best-performing model (by test RMSE)
+    # 5) Choose best model
     winner_row = results_df.iloc[0]
     winner_name = str(winner_row["model"])
     best_model = dict(models)[winner_name]
@@ -367,7 +425,7 @@ def main() -> None:
     print(f"Best model: {winner_name} (Test RMSE = {winner_row['test_rmse']:.3f})")
     print("=" * 70)
 
-    # 6) Save a concise run summary as a PNG table
+    # 6) Run summary (PNG)
     summary_df = pd.DataFrame(
         {
             "Item": ["Best model (by test RMSE)", "Test RMSE", "Test R²"],
@@ -382,13 +440,14 @@ def main() -> None:
     save_table_png(summary_df, summary_png, title="Run summary")
     print(f"Saved run summary table to: {summary_png}")
 
-    # 7) Eritrea out-of-sample estimation (PNG table only)
+    # 7) Eritrea estimation table (PNG only) — ensure year is integer (no .000)
     if X_eritrea is not None and len(X_eritrea) > 0:
         print("\nEstimating GDP per capita for Eritrea...")
-        y_log_eri = best_model.predict(X_eritrea)   # log GDPpc
-        y_eri = np.exp(y_log_eri)                   # USD per capita
+        y_log_eri = best_model.predict(X_eritrea)
+        y_eri = np.exp(y_log_eri)
 
         est_df = eritrea_meta.copy()
+        est_df["year"] = est_df["year"].astype(int)
         est_df["gdp_pcap_est_usd"] = y_eri
 
         est_for_png = est_df.copy()
@@ -402,8 +461,8 @@ def main() -> None:
         )
 
         print("\nEstimates for Eritrea (GDP per capita in USD):")
-        for (country, year), gdp_pcap in zip(eritrea_meta.values, y_eri):
-            print(f"{country} {year}: {gdp_pcap:,.0f} USD")
+        for (country, year), gdp_pcap in zip(est_df[["country", "year"]].values, y_eri):
+            print(f"{country} {int(year)}: {gdp_pcap:,.0f} USD")
 
         print(f"\nSaved Eritrea estimation table to: {eritrea_png}")
         print("=" * 70)
