@@ -1,12 +1,13 @@
 # src/config.py
 from pathlib import Path
 
-# Root folder of your project (where main.py / src live)
+# Repository root directory (i.e., the project’s top-level folder containing `main.py` and `src/`).
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# All countries for which you want night-lights data (including Eritrea, our prediction target)
+# Universe of ISO3 country codes defining the geographic scope of the analysis.
+# Eritrea (ERI) is included as a held-out prediction target.
 TARGET_COUNTRIES = [
-    "ERI",  # Eritrea (prediction target)
+    "ERI",  # Eritrea (held-out prediction target)
 
     # --- Africa ---
     "DZA", "AGO", "BEN", "BWA", "BFA", "BDI", "CMR", "CAF", "TCD",
@@ -25,7 +26,7 @@ TARGET_COUNTRIES = [
     "BHR", "IRN", "IRQ", "JOR", "KWT", "LBN", "OMN", "QAT", "SAU",
     "SYR", "TUR", "ARE", "YEM",
 
-    # --- Asia (added) ---
+    # --- Asia ---
     # East Asia
     "CHN", "JPN", "KOR", "MNG",
     # South Asia
@@ -37,40 +38,33 @@ TARGET_COUNTRIES = [
 ]
 
 
-
-# Countries that DO have GDP data (used for training)
-# -> all TARGET_COUNTRIES except Eritrea
+# Definition of the training sample: all analysis countries excluding Eritrea, which is reserved for prediction.
 TRAINING_COUNTRIES = [c for c in TARGET_COUNTRIES if c != "ERI"]
 
-# Column name in your shapefile that contains these codes
-# If you're still using Natural Earth, this is likely "SOV_A3" or "ADM0_A3",
-# not "ISO3". Adjust to match your shapefile.
-ISO_COL = "ISO3"
+# Administrative boundary dataset used to spatially aggregate raster values to the country level.
+# `ISO_COL` identifies the attribute containing ISO3-equivalent codes within the shapefile.
+SHAPE_PATH = BASE_DIR / "data" / "raw" / "ne_10m_admin_0_countries.shp"
+ISO_COL = "SOV_A3"
 
-# Years to process (adapt if you have more VIIRS years)
+# Temporal coverage of the analysis (inclusive).
 YEARS = list(range(2012, 2023))  # 2012–2022 inclusive
 
 
 def viirs_raster_path(year: int) -> Path:
-    """Path to VIIRS raster for a given year."""
+    """Return the path to the VIIRS night-lights raster for a given year."""
     return BASE_DIR / "data" / "raw" / f"viirs_{year}.tif"
 
 
-def countries_shapefile_path() -> Path:
-    """Path to the countries shapefile."""
-    return BASE_DIR / "data" / "raw" / "boundaries" / "countries.shp"
-
-
 def per_year_output_dir() -> Path:
-    """Folder where per-year VIIRS CSVs will be stored."""
+    """Return the directory used to store intermediate, per-year country aggregates (processed data)."""
     return BASE_DIR / "data" / "processed" / "viirs_country_year"
 
 
 def panel_output_path() -> Path:
-    """Path to VIIRS panel CSV."""
-    return BASE_DIR / "data" / "processed" / "viirs_country_panel.csv"
+    """Return the path for the consolidated VIIRS country-year panel (processed data)."""
+    return BASE_DIR / "data" / "processed" / "viirs_panel.csv"
 
 
 def gdp_panel_path() -> Path:
-    """Path to cleaned GDP panel CSV (output of gdp_processing)."""
-    return BASE_DIR / "data" / "processed" / "gdp_africa_panel.csv"
+    """Return the path for the cleaned GDP-per-capita panel produced by the GDP preprocessing stage (processed data)."""
+    return BASE_DIR / "data" / "processed" / "gdp_panel.csv"
