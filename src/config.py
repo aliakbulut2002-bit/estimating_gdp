@@ -38,7 +38,7 @@ TARGET_COUNTRIES = [
 ]
 
 
-# Definition of the training sample: all analysis countries excluding Eritrea, which is reserved for prediction.
+# Definition of the training sample: all analysis countries excluding Eritrea, which is left out for estimation.
 TRAINING_COUNTRIES = [c for c in TARGET_COUNTRIES if c != "ERI"]
 
 # Administrative boundary dataset used to spatially aggregate raster values to the country level.
@@ -50,21 +50,3 @@ ISO_COL = "SOV_A3"
 YEARS = list(range(2012, 2023))  # 2012–2022 inclusive
 
 
-def viirs_raster_path(year: int) -> Path:
-    """Return the path to the VIIRS night-lights raster for a given year."""
-    return BASE_DIR / "data" / "raw" / f"viirs_{year}.tif"
-
-
-def per_year_output_dir() -> Path:
-    """Return the directory used to store intermediate, per-year country aggregates (processed data)."""
-    return BASE_DIR / "data" / "processed" / "viirs_country_year"
-
-
-def panel_output_path() -> Path:
-    """Return the path for the consolidated VIIRS country-year panel (processed data)."""
-    return BASE_DIR / "data" / "processed" / "viirs_panel.csv"
-
-
-def gdp_panel_path() -> Path:
-    """Return the path for the cleaned GDP-per-capita panel produced by the GDP preprocessing stage (processed data)."""
-    return BASE_DIR / "data" / "processed" / "gdp_panel.csv"

@@ -1,7 +1,6 @@
 # src/data_loader.py
-"""Data loading and preprocessing for the GDP estimation project."""
+"""Data ingestion and preprocessing routines for the GDP-per-capita estimation pipeline."""
 
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,74 +9,88 @@ from sklearn.preprocessing import StandardScaler
 
 from src.config import BASE_DIR
 
-# ---- global config for reproducibility ----
+# Global reproducibility settings
 RANDOM_STATE = 42
-np.random.seed(RANDOM_STATE)
 
+
+# Path to the consolidated modeling panel produced by the upstream preprocessing and merge steps
 PANEL_PATH = BASE_DIR / "data" / "processed" / "model_panel.csv"
 
 
 def load_and_split(test_size: float = 0.2, random_state: int = RANDOM_STATE):
     """
-    Load model_panel.csv, build features, split into train/test, and
-    also return Eritrea features for prediction.
+    Loads the merged country-year modeling panel, constructs features, and splits the training
+    sample into train/test sets. Eritrea is systematically excluded from training and held
+    out for out-of-sample prediction.
 
-    Training data:
-        - all rows where country != "ERI"
-    Test data:
-        - random sample (size = test_size) of the training countries
-          using sklearn.model_selection.train_test_split with the
-          given random_state.
+    Design
+    ------
+    Training pool:
+        - All observations with country != "ERI" and non-missing target.
+    Test set:
+        - Random holdout from the training pool with size `test_size`, using the provided
+          `random_state` for reproducibility.
+    Eritrea holdout:
+        - All observations with country == "ERI" are returned separately and are never
+          used for model fitting.
 
-    Eritrea:
-        - all rows where country == "ERI" are kept aside and NEVER used
-          in training; they are only used later for prediction.
+    Parameters
+    ----------
+    test_size : float
+        Proportion of the non-Eritrea sample reserved for testing.
+    random_state : int
+        Seed controlling the train/test split.
 
     Returns
     -------
-    X_train : np.ndarray, shape (n_train, n_features)
-    X_test  : np.ndarray, shape (n_test, n_features)
-    y_train : np.ndarray, shape (n_train,)
-    y_test  : np.ndarray, shape (n_test,)
-    X_eritrea : np.ndarray or None, shape (n_eri_years, n_features)
-    eritrea_meta : pd.DataFrame with columns [country, year]
+    X_train : np.ndarray
+        Standardized feature matrix for the training set, shape (n_train, n_features).
+    X_test : np.ndarray
+        Standardized feature matrix for the test set, shape (n_test, n_features).
+    y_train : np.ndarray
+        Target vector for the training set (log GDP per capita), shape (n_train,).
+    y_test : np.ndarray
+        Target vector for the test set (log GDP per capita), shape (n_test,).
+    X_eritrea : np.ndarray or None
+        Standardized Eritrea feature matrix for prediction, shape (n_eri_years, n_features),
+        or None if Eritrea observations are not present in the panel.
+    eritrea_meta : pd.DataFrame
+        Metadata for Eritrea rows (country, year), aligned with X_eritrea where applicable.
     """
     print(f"Reading panel from: {PANEL_PATH}")
     df = pd.read_csv(PANEL_PATH)
 
-    # --- clean column names ---
+    # Standardize GDP-per-capita column name for downstream consistency
     df = df.rename(columns={"gdp_pcap (US dollars)": "gdp_pcap"})
 
     if "gdp_pcap" not in df.columns:
         raise ValueError("Expected column 'gdp_pcap' in model_panel.csv")
 
-    # --- target: log GDP per capita ---
+    # Target definition: natural logarithm of GDP per capita
     df["log_gdp_pcap"] = np.log(df["gdp_pcap"])
     target_col = "log_gdp_pcap"
 
-    # --- feature engineering ---
-    df["log_light"] = np.log1p(df["mean_light"])        # log(1 + light)
+    # Feature construction (log transforms and unit normalization)
+    df["log_light"] = np.log1p(df["mean_light"])        # log(1 + mean_light)
     df["log_pop"] = np.log(df["population"])
     df["log_land_area"] = np.log(df["land_area"])
-    df["urban_share"] = df["urban_pop_rate"] / 100.0    # from % to 0–1
+    df["urban_share"] = df["urban_pop_rate"] / 100.0    # convert percentage to share in [0, 1]
 
     feature_cols = ["log_light", "log_pop", "log_land_area", "urban_share"]
 
-    # --- separate Eritrea (prediction target, never in training) ---
+    # Eritrea holdout sample (excluded from training; used only for prediction)
     eritrea_mask = df["country"] == "ERI"
     eritrea_meta = df.loc[eritrea_mask, ["country", "year"]].copy()
 
-    X_eritrea = (
-        df.loc[eritrea_mask, feature_cols].values if eritrea_mask.any() else None
-    )
+    X_eritrea = df.loc[eritrea_mask, feature_cols].values if eritrea_mask.any() else None
 
-    # --- training pool: all other countries ---
+    # Training pool: all non-Eritrea observations with observed target
     df_train = df[~eritrea_mask].dropna(subset=[target_col])
 
     X = df_train[feature_cols].values
     y = df_train[target_col].values
 
-    # --- train / test split (random but reproducible) ---
+    # Random train/test split (reproducible via `random_state`)
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -85,13 +98,11 @@ def load_and_split(test_size: float = 0.2, random_state: int = RANDOM_STATE):
         random_state=random_state,
     )
 
-    # --- scale features (important for kNN, harmless for RF/OLS) ---
+    # Feature standardization (required for distance-based methods; benign for tree-based and linear models)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-    X_eritrea_scaled = (
-        scaler.transform(X_eritrea) if X_eritrea is not None else None
-    )
+    X_eritrea_scaled = scaler.transform(X_eritrea) if X_eritrea is not None else None
 
     return (
         X_train_scaled,
