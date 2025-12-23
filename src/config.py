@@ -47,6 +47,6 @@ SHAPE_PATH = BASE_DIR / "data" / "raw" / "ne_10m_admin_0_countries.shp"
 ISO_COL = "SOV_A3"
 
 # Temporal coverage of the analysis (inclusive).
-YEARS = list(range(2012, 2023))  # 2012–2022 inclusive
+YEARS = list(range(2012, 2022))  # 2012–2021 inclusive
 
 

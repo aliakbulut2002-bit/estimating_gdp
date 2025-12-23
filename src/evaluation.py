@@ -71,8 +71,8 @@ def evaluate_one_model(
         "test_rmse": test_rmse,
         "train_r2": train_r2,
         "test_r2": test_r2,
-        "rmse_gap": test_rmse - train_rmse,   # positive values suggest worse generalization
-        "r2_gap": train_r2 - test_r2,         # positive values suggest worse generalization
+        "rmse_gap": test_rmse - train_rmse,  
+        "r2_gap": train_r2 - test_r2,         
     }
 
 
