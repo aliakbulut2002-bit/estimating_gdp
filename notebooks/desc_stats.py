@@ -19,7 +19,7 @@ Scope
 -----
 - Numeric variables only.
 - Statistics reported per variable: N (non-missing count), mean, standard
-  deviation, minimum, median, maximum, and missingness rate (%).
+  deviation, minimum, median, and maximum.
 
 Design choices
 --------------
@@ -53,9 +53,8 @@ def prettify_variable_names(tab: pd.DataFrame) -> pd.DataFrame:
     """
     Replace raw variable identifiers with report-friendly labels.
 
-    This mapping is intended to improve the interpretability of the descriptive
-    statistics table in the final report. The GDP unit is indicated using a
-    dollar sign in the label rather than spelling out the currency textually.
+    The GDP unit is indicated using a dollar sign in the label rather than
+    spelling out the currency textually.
     """
     name_map = {
         "year": "Year",
@@ -92,11 +91,6 @@ def make_desc_table(df: pd.DataFrame, exclude: list[str]) -> pd.DataFrame:
     -------
     pd.DataFrame
         Table indexed by variable name and containing standard descriptive statistics.
-
-    Notes
-    -----
-    The missingness rate is computed relative to the full sample size (len(df)),
-    rather than relative to the non-missing count.
     """
     # Exclude non-analytic columns when requested (e.g., country identifiers).
     df2 = df.drop(columns=[c for c in exclude if c in df.columns], errors="ignore")
@@ -116,12 +110,11 @@ def make_desc_table(df: pd.DataFrame, exclude: list[str]) -> pd.DataFrame:
             "Min": num.min(),
             "Median": num.median(),
             "Max": num.max(),
-            "Missing_%": (1 - num.count() / len(df)) * 100,
         }
     )
 
     # Apply report-oriented rounding to reduce visual clutter.
-    tab = tab.round({"Mean": 2, "Std": 2, "Min": 2, "Median": 2, "Max": 2, "Missing_%": 1})
+    tab = tab.round({"Mean": 2, "Std": 2, "Min": 2, "Median": 2, "Max": 2})
     tab.index.name = "Variable"
 
     # Replace internal variable identifiers with report-friendly labels.
@@ -145,8 +138,7 @@ def save_table_png(tab: pd.DataFrame, png_path: Path, title: str | None = None) 
 
     Notes
     -----
-    The function includes formatting steps aimed at producing a publication-ready
-    table:
+    The function is designed to produce a report-ready table:
     - variable labels are wrapped and left-aligned to avoid clipping;
     - numeric columns are right-aligned for readability;
     - large magnitudes are formatted with thousands separators to prevent
@@ -174,7 +166,6 @@ def save_table_png(tab: pd.DataFrame, png_path: Path, title: str | None = None) 
         Format numeric values for compact, readable tabular display.
 
         - N is formatted as an integer.
-        - Missing_% is formatted to one decimal.
         - Large magnitudes use thousands separators to enhance legibility.
         """
         if pd.isna(x):
@@ -186,9 +177,6 @@ def save_table_png(tab: pd.DataFrame, png_path: Path, title: str | None = None) 
 
         if colname == "N":
             return f"{int(round(x))}"
-
-        if colname.startswith("Missing"):
-            return f"{x:.1f}"
 
         # Thousands separators are applied to large magnitudes to reduce visual crowding.
         if abs(x) >= 1_000_000:
@@ -329,3 +317,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

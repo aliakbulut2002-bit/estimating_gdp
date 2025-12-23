@@ -84,6 +84,7 @@ All dependencies are pinned in `requirements.txt`. Core packages include:
 
 ## Important Notes
 - **Python version requirement:** This project must be run with **Python 3.11.9** (or an equivalent version that supports `rasterio`). Using an incompatible Python version may prevent `rasterio` from installing or running, and the pipeline will fail.
+- **Raw data:** The file named "raw" containing all the raw data before processing is not included in the repo, you must download it from the dropbox link I sent and add it to the "data" folder. Otherwise the code will not run properly.
 - **Runtime:** A full execution of `main.py` takes approximately **10 minutes** to produce all outputs (depending on hardware).
 - **Data availability constraint:** Because the locally available night-time lights data cover **2012–2021**, the Eritrea GDP-per-capita estimates are limited to this period and cannot be extended to **2024** within the current setup.
 
