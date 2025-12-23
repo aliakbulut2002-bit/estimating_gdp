@@ -61,6 +61,7 @@ ESTIMATING_GDP-1/
 │   ├── raw/                                # Raw input datasets (Not present on the Repo,sent by DB)
 │   └── processed/                          # Cleaned/intermediate datasets 
 ├── results/                                # Output plots and figures
+├── notebooks/                              # Produces optional descriptive statistics
 ├── requirements.txt                        # Dependencies (pinned)
 └── README.md                               # Documentation
 
