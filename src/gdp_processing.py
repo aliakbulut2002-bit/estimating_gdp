@@ -56,7 +56,7 @@ def build_gdp_panel(
     )
 
     # Identify year columns at or after `first_year`.
-    # The current logic assumes year headers are *strings* containing digits (e.g., "2012").
+   
     year_cols = [
         c for c in df_raw.columns
         if isinstance(c, str) and c.isdigit() and int(c) >= first_year
