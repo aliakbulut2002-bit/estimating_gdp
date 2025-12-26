@@ -1,7 +1,7 @@
 # Estimating GDP per Capita from Night-Time Lights: Model Comparison
 
 ## Research Question
-Can we estimate GDP per capita in Eritrea, where official GDP data have been unavailable since 2011, using non-economic data—such as night-time lights intensity and auxiliary variables (population, urban population share, and land area)—and which machine learning approach provides the performance for doing so ?
+Can we estimate GDP per capita in Eritrea, where official GDP data have been unavailable since 2011, using non-economic data—such as night-time lights intensity and auxiliary variables (population, urban population share, and land area)—and which machine learning approach provides the best results ?
 
 ## Method 
 Models are trained on a multi-country, country–year panel and then used to generate out-of-sample GDP-per-capita estimates for Eritrea using night-time lights and auxiliary covariates, including population, land area and urban population share (urban population as a percentage of total population).
@@ -61,7 +61,7 @@ ESTIMATING_GDP-1/
 │   ├── raw/                                # Raw input datasets (Not present on the Repo,sent by DB)
 │   └── processed/                          # Cleaned/intermediate datasets 
 ├── results/                                # Output plots and figures
-├── notebooks/                              # Produces optional descriptive statistics
+├── notebooks/                              # Produces optional charts and tables 
 ├── requirements.txt                        # Dependencies (pinned)
 └── README.md                               # Documentation
 
