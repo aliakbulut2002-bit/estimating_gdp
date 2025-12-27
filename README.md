@@ -10,22 +10,25 @@ Models are trained on a multi-country, country–year panel and then used to gen
 
 ## Setup
 
-# Create environment
-***python -m venv .venv***
-
-# macOS / Linux
-***source .venv/bin/activate***
+# Python 3.11.9 was used
 
 # Windows (PowerShell)
- ***.\.venv\Scripts\Activate.ps1***
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python --version
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+python main.py
 
-# Install dependencies
-***python -m pip install --upgrade pip***
-***python -m pip install -r requirements.txt***
+# macOS/Linux 
 
-## Usage
+python3.11 -m venv .venv
+source .venv/bin/activate
+python --version
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+python main.py
 
-***python main.py***
 
 ## Outputs
 Running `python main.py` writes all figures to the `results/` directory:
