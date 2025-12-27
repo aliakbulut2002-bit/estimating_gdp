@@ -1,24 +1,30 @@
 # main.py
 """
-Main entry point for the project.
+Primary entry point for the project.
 
-This script provides a single, reproducible execution pathway for the full workflow:
-    raw data -> processed country-year tables -> merged modeling panel
-             -> model training and comparative evaluation
-             -> out-of-sample GDP-per-capita estimation for Eritrea
+This script provides a single, reproducible execution pathway for the modelling workflow
+conditional on the availability of pre-processed inputs:
+
+    processed country-year tables -> merged modelling panel -> model training and evaluation
+                                  -> out-of-sample GDP-per-capita estimation for Eritrea
 
 Intended usage (from the repository root):
     python main.py
 
+Inputs (must already exist):
+    - data/processed/model_panel.csv
+
 Outputs:
-    - Intermediate processed datasets: data/processed/
-    - Final artifacts (tables/figures/estimates): results/
+    - Final artefacts (tables/figures/estimates): results/
+
+Note:
+    The raw-data processing pipeline is intentionally not executed here. This design choice
+    avoids imposing large raw-data downloads on end users and ensures that evaluation and
+    estimation can be reproduced directly from the processed panel.
 """
 
 from __future__ import annotations
 
-import sys
-import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +34,6 @@ import matplotlib.pyplot as plt
 from src.config import BASE_DIR
 from src.data_loader import load_and_split
 from src.models import train_random_forest, train_knn, train_linear, train_gbdt
-
 from src.evaluation import (
     evaluate_one_model,
     build_results_table,
@@ -38,37 +43,22 @@ from src.evaluation import (
 RANDOM_STATE = 42
 
 
-def run_module(module_name: str) -> None:
-    """Execute a project module via `python -m <module>` using the current interpreter."""
-    print(f"  Running {module_name} ...")
-    subprocess.run([sys.executable, "-m", module_name], check=True)
-
-
-def run_data_pipeline() -> None:
-    """
-    Execute preprocessing modules in a standard dependency order and construct the modeling panel.
-    """
-    print("\n0) Building dataset from raw files...")
-
-    run_module("src.viirs_processing")
-    run_module("src.population_processing")
-    run_module("src.urbanpop_processing")
-    run_module("src.land_area_processing")
-    run_module("src.gdp_processing")
-
-    # Final merge (produces model_panel.csv consumed by src/data_loader.py)
-    run_module("src.merge_data")
-
-    print("   ✓ Data pipeline finished")
-
-
 def save_table_png(df: pd.DataFrame, out_path: Path, title: str | None = None) -> None:
     """
-    Save a pandas DataFrame as a readable PNG table.
+    Render a pandas DataFrame as a PNG image to facilitate inclusion in reports or slides.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Table to be rendered.
+    out_path : Path
+        Output path for the PNG image.
+    title : str | None
+        Optional title displayed above the table.
     """
     df_disp = df.copy()
 
-    # Convert all cells to strings (avoid float artifacts like 2012.000)
+    # The conversion to strings mitigates visual artefacts associated with floating-point display.
     for col in df_disp.columns:
         if pd.api.types.is_numeric_dtype(df_disp[col]):
             df_disp[col] = df_disp[col].map(
@@ -84,8 +74,8 @@ def save_table_png(df: pd.DataFrame, out_path: Path, title: str | None = None) -
     cell_text = df_disp.values.tolist()
     col_labels = df_disp.columns.tolist()
 
-    # Auto-size columns based on content length
-    col_max_lens = []
+    # Column widths are scaled in proportion to the maximum string length per column.
+    col_max_lens: list[int] = []
     for j, col in enumerate(col_labels):
         max_len = len(str(col))
         for i in range(len(cell_text)):
@@ -115,11 +105,11 @@ def save_table_png(df: pd.DataFrame, out_path: Path, title: str | None = None) -
     table.set_fontsize(11)
     table.scale(1.0, 1.45)
 
-    # Bold headers
+    # Header emphasis improves readability in presentation settings.
     for j in range(ncols):
         table[(0, j)].set_text_props(weight="bold")
 
-    # Left-align first column (model names / country codes)
+    # Left alignment is applied to the first column to support label interpretation.
     for i in range(1, nrows + 1):
         table[(i, 0)].set_text_props(ha="left")
 
@@ -132,7 +122,19 @@ def save_table_png(df: pd.DataFrame, out_path: Path, title: str | None = None) -
 
 
 def _slug(s: str) -> str:
-    """Create a filename-safe slug."""
+    """
+    Construct a filesystem-compatible identifier from a human-readable label.
+
+    Parameters
+    ----------
+    s : str
+        Input string.
+
+    Returns
+    -------
+    str
+        Sanitised string suitable for filenames.
+    """
     return (
         s.lower()
         .replace(" ", "_")
@@ -152,7 +154,11 @@ def save_true_vs_pred_png(
     xlabel: str = "True log GDP per capita",
     ylabel: str = "Estimated log GDP per capita",
 ) -> None:
-    """Save a True vs Estimated scatter plot with a 45-degree reference line."""
+    """
+    Save a diagnostic scatter plot of true outcomes against model predictions.
+
+    A 45-degree reference line is included to facilitate visual assessment of calibration.
+    """
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(y_true, y_pred, alpha=0.6)
     ax.set_xlabel(xlabel)
@@ -178,10 +184,16 @@ def save_metric_bars_png(
     zoom: bool = True,
 ) -> None:
     """
-    Save a bar chart comparing models on a given metric.
+    Save a bar chart that compares models on a specified evaluation metric.
 
-    - Thin bars via `bar_width`
-    - Optional y-axis zoom to reduce “visual exaggeration”
+    Parameters
+    ----------
+    results_df : pd.DataFrame
+        Model comparison table containing the metric to be plotted.
+    metric_col : str
+        Column name of the metric (e.g., 'test_rmse', 'test_r2').
+    zoom : bool
+        If True, adjust y-limits to improve visual discrimination across models.
     """
     df = results_df.copy()
     if metric_col.endswith("rmse"):
@@ -234,10 +246,9 @@ def save_nightlights_vs_log_gdp_zoom_png(
     gdp_col_candidates: tuple[str, ...] = ("gdp_pcap", "gdp_pcap (US dollars)"),
 ) -> None:
     """
-    Save a diagnostic scatter plot of night-time lights vs log GDP per capita (zoomed to mean_light in [0, 1]),
-    including a fitted linear trend line in the transformed x-scale.
+    Save an exploratory diagnostic plot of night-time lights versus log GDP per capita.
 
-    This reads the merged model panel produced by `src.merge_data`.
+    The plot is restricted to mean_light in [0, 1] to improve readability in low-luminosity ranges.
     """
     if panel_path is None:
         panel_path = BASE_DIR / "data" / "processed" / "model_panel.csv"
@@ -245,10 +256,11 @@ def save_nightlights_vs_log_gdp_zoom_png(
     try:
         df = pd.read_csv(panel_path)
     except FileNotFoundError:
-        print(f"   ! Warning: model_panel.csv not found at {panel_path}; skipping night-lights plot.")
+        print(f"Required input not found: {panel_path}")
+        print("Please ensure that data/processed/model_panel.csv is available.")
         return
 
-    # Resolve GDP column name
+    # Identify the GDP column name used in the merged panel.
     gdp_col = None
     for c in gdp_col_candidates:
         if c in df.columns:
@@ -257,76 +269,81 @@ def save_nightlights_vs_log_gdp_zoom_png(
 
     if x_col not in df.columns or gdp_col is None:
         print(
-            "   ! Warning: required columns for night-lights plot not found. "
-            f"Need '{x_col}' and one of {gdp_col_candidates}. Skipping."
+            "Required columns for the night-lights diagnostic plot are not available. "
+            f"Expected '{x_col}' and one of {gdp_col_candidates}."
         )
         return
 
     df_plot = df[[x_col, gdp_col]].copy()
     df_plot = df_plot.dropna(subset=[x_col, gdp_col])
 
-    # Ensure numeric types
     df_plot[x_col] = pd.to_numeric(df_plot[x_col], errors="coerce")
     df_plot[gdp_col] = pd.to_numeric(df_plot[gdp_col], errors="coerce")
     df_plot = df_plot.dropna(subset=[x_col, gdp_col])
 
     if len(df_plot) == 0:
-        print("   ! Warning: no valid rows for night-lights plot after dropping NAs; skipping.")
+        print("No valid observations are available for the night-lights diagnostic plot.")
         return
 
     x_raw = df_plot[x_col].values
     y = np.log(df_plot[gdp_col].values)
 
-    # Zoom: keep only mean_light in [0, 1]
+    # Restrict attention to low-luminosity observations.
     msk = (x_raw >= 0) & (x_raw <= 1)
     x_raw = x_raw[msk]
     y = y[msk]
 
     if x_raw.size < 2:
-        print("   ! Warning: insufficient data in mean_light range [0, 1] for night-lights plot; skipping.")
+        print("Insufficient observations in mean_light ∈ [0, 1] to construct the diagnostic plot.")
         return
 
-    # Transform x for fitting and plotting
+    # The log(1 + x) transform supports interpretability and stabilises the scale.
     x = np.log1p(x_raw)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.scatter(x, y, alpha=0.35, s=18)
 
-    # Linear trend in transformed space
+    # Linear trend estimation in the transformed space.
     m, b = np.polyfit(x, y, 1)
     x_line = np.linspace(float(x.min()), float(x.max()), 200)
     y_line = m * x_line + b
     ax.plot(x_line, y_line, color="red", linewidth=2)
 
-    ax.set_xlabel("log(1 + mean_light)  (zoom: mean_light 0–1)")
+    ax.set_xlabel("log(1 + mean_light)  (restricted to mean_light in [0, 1])")
     ax.set_ylabel("log(GDP per capita)")
-    ax.set_title("Night lights vs log GDP per capita (with linear trend)")
+    ax.set_title("Night-time lights versus log GDP per capita")
 
     fig.tight_layout()
     out_path = results_dir / "nightlights_vs_log_gdp_zoom_0_1.png"
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"   ✓ Saved: {out_path.name}")
+    print(f"Saved diagnostic plot: {out_path.name}")
 
 
 def main() -> None:
     print("=" * 70)
-    print("GDP per capita regression: End-to-end pipeline")
+    print("GDP per capita regression: modelling and evaluation workflow")
     print("=" * 70)
 
     results_dir = BASE_DIR / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # 0) Build processed data and merged modeling panel from raw inputs
-    run_data_pipeline()
+    # The workflow assumes that the merged modelling panel has already been produced.
+    panel_path = BASE_DIR / "data" / "processed" / "model_panel.csv"
+    if not panel_path.exists():
+        raise FileNotFoundError(
+            f"Missing required input: {panel_path}\n"
+            "This script is configured to run from pre-processed data. "
+            "Please ensure that data/processed/model_panel.csv is present."
+        )
 
-    # NEW: save the night-lights vs log GDP scatter (zoomed) from model_panel.csv
-    print("\n0b) Saving exploratory plot (night lights vs log GDP)...")
-    save_nightlights_vs_log_gdp_zoom_png(results_dir=results_dir)
+    # Exploratory diagnostic plot derived from the merged modelling panel.
+    print("\n0) Constructing exploratory diagnostic plot (night-time lights vs log GDP)...")
+    save_nightlights_vs_log_gdp_zoom_png(results_dir=results_dir, panel_path=panel_path)
 
-    # 1) Load split (Eritrea is held out)
-    print("\n1) Loading modeling panel and splitting data...")
+    # Data loading and split procedure. Eritrea is held out for subsequent estimation.
+    print("\n1) Loading modelling panel and splitting data (Eritrea held out)...")
     (
         X_train,
         X_test,
@@ -336,21 +353,21 @@ def main() -> None:
         eritrea_meta,
     ) = load_and_split(test_size=0.2, random_state=RANDOM_STATE)
 
-    print(f"   Train size: {X_train.shape}")
-    print(f"   Test size:  {X_test.shape}")
+    print(f"Training sample size: {X_train.shape}")
+    print(f"Test sample size:     {X_test.shape}")
     if X_eritrea is not None:
-        print(f"   Eritrea rows kept for estimation: {X_eritrea.shape[0]}")
+        print(f"Eritrea observations retained for estimation: {X_eritrea.shape[0]}")
 
-    # 2) Train models
-    print("\n2) Training candidate models...")
+    # Model estimation on the training set.
+    print("\n2) Estimating candidate models...")
     lr_model = train_linear(X_train, y_train)
     knn_model = train_knn(X_train, y_train, n_neighbors=15)
     gbdt_model = train_gbdt(X_train, y_train, random_state=RANDOM_STATE)
     rf_model = train_random_forest(X_train, y_train, random_state=RANDOM_STATE)
-    print("   ✓ All models trained")
+    print("Model estimation completed.")
 
-    # 3) Evaluate
-    print("\n3) Evaluating models (target = log GDP per capita)...")
+    # Out-of-sample evaluation on the held-out test set.
+    print("\n3) Evaluating out-of-sample predictive performance (target = log GDP per capita)...")
     models = [
         ("Linear regression", lr_model),
         ("kNN", knn_model),
@@ -362,19 +379,17 @@ def main() -> None:
     results_df = build_results_table(results, sort_by="test_rmse")
     print_results_table(results_df)
 
-    # Model comparison table (PNG only)
+    # Persist the model comparison table as a figure for reporting.
     model_table_png = results_dir / "model_comparison.png"
     save_table_png(
         results_df.round(3),
         model_table_png,
         title="Model comparison (target: log GDP per capita)",
     )
-    print(f"\nSaved model comparison table to: {model_table_png}")
+    print(f"Saved model comparison table: {model_table_png.name}")
 
-    # 4) Save figures
-    print("\n4) Saving figures to results/ ...")
-
-    # 4a) True vs Estimated (4 plots)
+    # Diagnostic and summary figures.
+    print("\n4) Saving diagnostic and summary figures...")
     for name, model in models:
         y_pred = model.predict(X_test)
         out_path = results_dir / f"true_vs_est_{_slug(name)}.png"
@@ -385,9 +400,8 @@ def main() -> None:
             title=f"{name}: True vs Estimated (test set)",
             ylabel=f"Estimated log GDP per capita ({name})",
         )
-        print(f"   ✓ Saved: {out_path.name}")
+        print(f"Saved: {out_path.name}")
 
-    # 4b) Metric charts (2 plots)
     r2_png = results_dir / "comparison_test_r2.png"
     save_metric_bars_png(
         results_df=results_df,
@@ -398,7 +412,7 @@ def main() -> None:
         bar_width=0.45,
         zoom=True,
     )
-    print(f"   ✓ Saved: {r2_png.name}")
+    print(f"Saved: {r2_png.name}")
 
     rmse_png = results_dir / "comparison_test_rmse.png"
     save_metric_bars_png(
@@ -410,25 +424,25 @@ def main() -> None:
         bar_width=0.45,
         zoom=True,
     )
-    print(f"   ✓ Saved: {rmse_png.name}")
+    print(f"Saved: {rmse_png.name}")
 
-    # 5) Choose best model
+    # Model selection using the primary criterion (test RMSE).
     winner_row = results_df.iloc[0]
     winner_name = str(winner_row["model"])
     best_model = dict(models)[winner_name]
 
     print("\n" + "=" * 70)
-    print("Leaderboard (sorted by Test RMSE; lower is better):")
+    print("Model ranking (sorted by Test RMSE; lower values indicate superior performance):")
     for _, row in results_df.iterrows():
         print(f"  {row['model']:24s}  RMSE={row['test_rmse']:.3f}  R²={row['test_r2']:.3f}")
     print("-" * 70)
-    print(f"Best model: {winner_name} (Test RMSE = {winner_row['test_rmse']:.3f})")
+    print(f"Selected model: {winner_name} (Test RMSE = {winner_row['test_rmse']:.3f})")
     print("=" * 70)
 
-    # 6) Run summary (PNG)
+    # Persist a compact run summary for reporting.
     summary_df = pd.DataFrame(
         {
-            "Item": ["Best model (by test RMSE)", "Test RMSE", "Test R²"],
+            "Item": ["Selected model (by test RMSE)", "Test RMSE", "Test R²"],
             "Value": [
                 winner_name,
                 f"{float(winner_row['test_rmse']):.6f}",
@@ -438,11 +452,11 @@ def main() -> None:
     )
     summary_png = results_dir / "run_summary.png"
     save_table_png(summary_df, summary_png, title="Run summary")
-    print(f"Saved run summary table to: {summary_png}")
+    print(f"Saved: {summary_png.name}")
 
-    # 7) Eritrea estimation table (PNG only) — ensure year is integer (no .000)
+    # Out-of-sample estimation for Eritrea using the selected model.
     if X_eritrea is not None and len(X_eritrea) > 0:
-        print("\nEstimating GDP per capita for Eritrea...")
+        print("\n5) Producing out-of-sample GDP per capita estimates for Eritrea...")
         y_log_eri = best_model.predict(X_eritrea)
         y_eri = np.exp(y_log_eri)
 
@@ -450,6 +464,7 @@ def main() -> None:
         est_df["year"] = est_df["year"].astype(int)
         est_df["gdp_pcap_est_usd"] = y_eri
 
+        # A formatted version is created solely for legible table rendering.
         est_for_png = est_df.copy()
         est_for_png["gdp_pcap_est_usd"] = est_for_png["gdp_pcap_est_usd"].map(lambda x: f"{x:,.0f}")
 
@@ -459,15 +474,13 @@ def main() -> None:
             eritrea_png,
             title="Eritrea: GDP per capita estimation (USD)",
         )
+        print(f"Saved: {eritrea_png.name}")
 
-        print("\nEstimates for Eritrea (GDP per capita in USD):")
+        print("\nEritrea estimates (GDP per capita, USD):")
         for (country, year), gdp_pcap in zip(est_df[["country", "year"]].values, y_eri):
             print(f"{country} {int(year)}: {gdp_pcap:,.0f} USD")
-
-        print(f"\nSaved Eritrea estimation table to: {eritrea_png}")
-        print("=" * 70)
     else:
-        print("\nNo Eritrea estimates: X_eritrea is None or empty.")
+        print("\nNo Eritrea estimates were produced because Eritrea observations were not available.")
 
 
 if __name__ == "__main__":
