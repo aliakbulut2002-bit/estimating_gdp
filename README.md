@@ -14,9 +14,9 @@ The script was tested on several 64-bit Windows machines and on a Mac, and it ra
 
 Python 3.11.x (3.11.9 recommended)
 
-64-bit Windows, or macOS 11 (Big Sur) or newer
+64-bit Windows, or macOS 14+ on Apple Silicon or macOS 13+ on Intel
 
-If the script does not run properly, this is most likely because you are using a different Python version, or because your macOS version is too old (typically older than ~6 years, i.e., pre-2020 / older than macOS 11).
+If the script does not run properly, this is most likely because you are using a different Python version, or because your macOS version is too old.
 
 # Windows (PowerShell)
 py -3.11 -m venv .venv
