@@ -10,7 +10,13 @@ Models are trained on a multi-country, country–year panel and then used to gen
 
 ## Setup
 
-# Python 3.11.9 was used
+The script was tested on several 64-bit Windows machines and on a Mac, and it ran consistently. Please follow these requirements; otherwise main.py may fail:
+
+Python 3.11.x (3.11.9 recommended)
+
+64-bit Windows, or macOS 11 (Big Sur) or newer
+
+If the script does not run properly, this is most likely because you are using a different Python version, or because your macOS version is too old (typically older than ~6 years, i.e., pre-2020 / older than macOS 11).
 
 # Windows (PowerShell)
 py -3.11 -m venv .venv
