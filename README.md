@@ -19,6 +19,9 @@ Python 3.11.x (3.11.9 recommended)
 If the script does not run properly, this is most likely because you are using a different Python version, or because your macOS version is too old.
 
 # Windows (PowerShell)
+cd "path\to\folder"
+git clone https://github.com/aliakbulut2002-bit/estimating_gdp.git
+cd estimating_gdp
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python --version
@@ -27,7 +30,9 @@ pip install --prefer-binary -r requirements.txt
 python main.py
 
 # macOS/Linux 
-
+cd ~/path/to/folder
+git clone https://github.com/aliakbulut2002-bit/estimating_gdp.git
+cd estimating_gdp
 python3.11 -m venv .venv
 source .venv/bin/activate
 python --version
